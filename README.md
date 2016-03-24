@@ -25,7 +25,7 @@ Next, add a call to the `protectFromForgery` controller intializer in your base
 
 And then add a call to the `csrfMetaTags` view helper to your layout's `<head>` section:
 
-```
+```coldfusion
 <cfoutput>
 
 <head>
