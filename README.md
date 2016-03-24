@@ -71,7 +71,7 @@ Appropriately, this plugin adds a hidden field within all of your `startFormTag`
 `authenticityToken` that proves that a real human being is posting the form as they should be:
 
 ```html
-<input type="hidden" name="authenticityToken" value="">
+<input type="hidden" name="authenticityToken" value="cxRbrHAnwpG0Ki9vTYW4yg==">
 ```
 
 NOTE: If you do have any hard-coded `<form>` tags, you'll want to manually add a call to this plugin's
