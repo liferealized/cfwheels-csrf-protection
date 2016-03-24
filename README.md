@@ -74,6 +74,20 @@ Appropriately, this plugin adds a hidden field within all of your `startFormTag`
 <input type="hidden" name="authenticityToken" value="">
 ```
 
+NOTE: If you do have any hard-coded `<form>` tags, you'll want to manually add a call to this plugin's
+`authenticityTokenField` method:
+
+```coldfusion
+<cfoutput>
+<form action="#urlFor(route='users')#" method="post">
+	#authenticityTokenField()#
+	<!-- Etc. -->
+</form>
+</cfoutput>
+```
+
+(If you're using `startFormTag`, no need to worry about this: it's taken care of for you.)
+
 ## Skipping CSRF protection for APIs
 
 You'll likely not want CSRF protection enabled for API endpoints (which should be authenticated in some other
