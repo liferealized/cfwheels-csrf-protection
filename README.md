@@ -73,7 +73,7 @@ First, you need to make sure that all controller actions that change data requir
 
 There are a couple ways to accomplish this:
 
-1. Use the excellent [ColdRoute plugin][3]'s resource handling, and configure all of your one-off routes
+1) Use the excellent [ColdRoute plugin][3]'s resource handling, and configure all of your one-off routes
 using the HTTP verb-based helpers:
 
 ```coldfusion
@@ -96,7 +96,7 @@ drawRoutes()
 </cfscript>
 ```
 
-2. Use the CFWheels `verifies` method to ensure that a `POST` verb is used to access controller actions that
+2) Use the CFWheels `verifies` method to ensure that a `POST` verb is used to access controller actions that
 mutate data.
 
 Here is an example where the `create`, `update`, and `delete` methods are changing data in the database, and
@@ -223,7 +223,7 @@ chatty controller that you would just like to fail silently via `abort`.
 You can work with the inheritance chain similarly to what I prescribed in the _Skipping CSRF Protection for
 APIs_ section above (or even used in combination with that strategy):
 
-``coldfusion
+```coldfusion
 <!-- controllers/Controller.cfc -->
 <cfcomponent extends="Wheels">
 	<cffunction name="init">
@@ -281,3 +281,4 @@ Copyright (c) 2016 Liquifusion Studios
 
 [1]: https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29
 [2]: https://github.com/liquifusion/cfwheels-csrf-protection/releases
+[3]: https://github.com/dhumphreys/cfwheels-coldroute
