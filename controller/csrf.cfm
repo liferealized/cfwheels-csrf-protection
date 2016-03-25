@@ -1,18 +1,16 @@
 <cffunction name="protectFromForgery" hint="Controller initializer for setting up CSRF protection in the controller. Call this method within a controller's `init` method, preferrably the base `Controller.cfc` file to protect the entire application." output="false">
+	<cfargument name="with" type="string" required="false" default="exception" hint="How to handle invalid authenticity token checks. Valid values are `error` (throws a `Wheels.InvalidAuthenticityToken` error) and `abort` (aborts the request silently and sends a blank response to the client).">
 	<cfargument name="only" type="string" required="false" default="" hint="List of actions that this check should only run on. Leave blank for all.">
 	<cfargument name="except" type="string" required="false" default="" hint="List of actions that this check should be omitted from running on. Leave blank for no exceptions.">
 	<cfscript>
-		// Initialize filter.
-		filters(
-			argumentCollection=arguments,
-			through="$flagRequestAsProtected,$setAuthenticityToken,$verifyAuthenticityToken",
-			type="before"
-		);
+		// Store `with` setting for this controller in `application` scope for later use.
+		variables.$class.csrf.type = arguments.with;
 
+		// Initialize filters.
 		filters(
 			argumentCollection=arguments,
-			through="$regenerateAuthenticityToken",
-			type="after"
+			through="$flagRequestAsProtected,$setAuthenticityToken,$verifyAuthenticityToken,$regenerateAuthenticityToken",
+			type="before"
 		);
 	</cfscript>
 </cffunction>
@@ -25,10 +23,17 @@
 	<cfset var loc = {}>
 
 	<cfif not $isVerifiedRequest()>
-		<cfthrow
-			message="This POSTed request was attempted without a valid authenticity token."
-			type="Wheels.InvalidAuthenticityToken"
-		>
+		<cfswitch expression="#variables.$class.csrf.type#">
+			<cfcase value="abort">
+				<cfabort>
+			</cfcase>
+			<cfdefaultcase>
+				<cfthrow
+					message="This POSTed request was attempted without a valid authenticity token."
+					type="Wheels.InvalidAuthenticityToken"
+				>
+			</cfdefaultcase>
+		</cfswitch>
 	</cfif>
 </cffunction>
 
@@ -77,7 +82,7 @@
 	<cfscript>
 		// If valid and not AJAX-based, reset for next full-page request.
 		if (!isAjax() && $isRequestProtectedFromForgery()) {
-			$generateAuthenticityToken();
+			session.$wheels.authenticityToken = GenerateSecretKey("AES");
 		}
 	</cfscript>
 </cffunction>

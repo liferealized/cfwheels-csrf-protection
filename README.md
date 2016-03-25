@@ -7,7 +7,7 @@ This plugin helps protect against CSRF attacks by authorizing all `POST` request
 All `POST` requests must contain an authenticity token either via a field named `authenticityToken` (usually
 provided as a hidden form field) or a request header named `X-CSRF-Token` (usually for AJAX `POST`s). `POST`ed
 requests not containing this authenticity token will throw an exception named
-`Wheels.InvalidAuthenticityToken`.
+`Wheels.InvalidAuthenticityToken` by default.
 
 ## Setup
 
@@ -37,8 +37,25 @@ And then add a call to the `csrfMetaTags` view helper to your layout's `<head>` 
 
 Your application is now CSRF-protected, given that you're good with the _Prerequisites_ listed below.
 
-If you have an API, you'll probably want to read the _Skipping CSRF protection for APIs_ section later in
+If you have an API, you'll probably want to read the _Skipping CSRF Protection for APIs_ section later in
 this README.
+
+## Public Methods
+
+`protectFromForgery([string with, string only, string except])`<br />
+Call this in a controller's `init` method (usually in the base `controllers/Controller.cfc`) to setup CSRF
+protection. The optional `with` argument accepts values of `error` (default), which raises a
+`Wheels.InvalidAuthenticityToken` error on failed authenticity token verification, and `abort`, which aborts
+requests with a failed authenticity token silently. The `only` and `except` arguments work similarly to the
+corresponding ones for the CFWheels `filters` method.
+
+`csrfMetaTags()`<br />
+Include this in your layouts' `<head>` sections to include `meta` tags containing the authenticity token for
+use by JavaScript AJAX requests. (See the _Open Issue: AJAX Calls_ section below for more information.)
+
+`authenticityTokenField()`<br />
+If you need to manually place the `authenticityToken` hidden field in your own form, use this form helper to
+do so. (See the _Prerequisites_ section below for more information about this.)
 
 ## Prerequisites
 
@@ -50,11 +67,76 @@ At the time of this writing, web browser clients will only reliably perform `POS
 CFWheels forms are mutating data only via `POST` requests, you're good to go. If not, then you'll need to
 double-check this before patching up your application with this plugin.
 
+### Step 1: Protect the controllers
+
+First, you need to make sure that all controller actions that change data require a `POST` request.
+
+There are a couple ways to accomplish this:
+
+1. Use the excellent [ColdRoute plugin][3]'s resource handling, and configure all of your one-off routes
+using the HTTP verb-based helpers:
+
+```coldfusion
+<cfscript>
+drawRoutes()
+	// Resources already provide HTTP verb checks for actions that likely mutate data.
+	// This protects your app from CSRF.
+	.namespace("admin")
+		.resources("users")
+		.resources("roles")
+		.resources("permissions")
+	.end()
+
+	// Here, we make sure we're using HTTP verb-based routing, which also protects your app from CSRF.
+	.get(name="login", controller="sessions", action="new")
+	.post(name="authenticate", controller="sessions", action="create")
+	.get(name="forgotPassword", controller="passwords", action="edit")
+	.put(name="sendPassword", controller="passwords", action="update")
+.end()
+</cfscript>
+```
+
+2. Use the CFWheels `verifies` method to ensure that a `POST` verb is used to access controller actions that
+mutate data.
+
+Here is an example where the `create`, `update`, and `delete` methods are changing data in the database, and
+thus need to be protected. However, the `index`, `new`, and `update` methods don't need any sort of protection.
+
+```coldfusion
+<cfcomponent extends="Controller">
+	<cffunction name="init">
+		<cfset super.init()>
+		<cfset verifies(post=true, only="create,update,delete")>
+	</cffunction>
+
+	<cffunction name="index">
+	</cffunction>
+
+	<cffunction name="new">
+	</cffunction>
+
+	<cffunction name="create">
+	</cffunction>
+
+	<cffunction name="edit">
+	</cffunction>
+
+	<cffunction name="update">
+	</cffunction>
+
+	<cffunction name="delete">
+	</cffunction>
+</cfcomponent>
+```
+
+### Step 2: Make sure HTML forms are `POST`ing the data
+
 An example of good practice is using `startFormTag`'s default value for `method` whenever you're changing data
 through a form:
 
 ```coldfusion
 <cfoutput>
+
 <!-- The default is method="post" -->
 #startFormTag(route="users")#
 	<!--- Etc. --->
@@ -64,6 +146,7 @@ through a form:
 <form action="#urlFor(route='users')#" method="post">
 	<!-- Etc. -->
 </form>
+
 </cfoutput>
 ```
 
@@ -79,16 +162,18 @@ NOTE: If you do have any hard-coded `<form>` tags, you'll want to manually add a
 
 ```coldfusion
 <cfoutput>
+
 <form action="#urlFor(route='users')#" method="post">
 	#authenticityTokenField()#
 	<!-- Etc. -->
 </form>
+
 </cfoutput>
 ```
 
 (If you're using `startFormTag`, no need to worry about this: it's taken care of for you.)
 
-## Skipping CSRF protection for APIs
+## Skipping CSRF Protection for APIs
 
 You'll likely not want CSRF protection enabled for API endpoints (which should be authenticated in some other
 way like OAuth and/or via a token system anyway). You can avoid the CSRF protection by either not including it
@@ -112,7 +197,7 @@ app:
 <!-- controllers/Api.cfc -->
 <cfcomponent extends="Controller">
 	<cffunction name="init">
-		<!-- Turn off forgery protection for all API endpoints that enxtend this controller -->
+		<!-- Turn off forgery protection for all API endpoints that extend this controller -->
 		<cfset super.init(includeForgeryProtection=false)>
 
 		<cfset provides("json")>
@@ -126,6 +211,40 @@ app:
 	</cffunction>
 
 	<cffunction name="create">
+	</cffunction>
+</cfcomponent>
+```
+
+## Changing the Failed Authenticity Token Verification Strategy Per Controller
+
+Let's say that you want to raise an error for most authenticity token failures but have a particularly
+chatty controller that you would just like to fail silently via `abort`.
+
+You can work with the inheritance chain similarly to what I prescribed in the _Skipping CSRF Protection for
+APIs_ section above (or even used in combination with that strategy):
+
+``coldfusion
+<!-- controllers/Controller.cfc -->
+<cfcomponent extends="Wheels">
+	<cffunction name="init">
+		<cfargument name="protectFromForgeryWith" type="string" required="false" default="error">
+		<cfset protectFromForgery(with=arguments.protectFromForgeryWith)>
+	</cffunction>
+</cfcomponent>
+
+<!-- controllers/Comments.cfc -->
+<cfcomponent extends="Controller">
+	<cffunction name="init">
+		<!-- Don't throw an error for failed verification only for this controller. -->
+		<cfset super.init(protectFromForgeryWith="abort")>
+	</cffunction>
+</cfcomponent>
+
+<!-- controllers/Sessions.cfc -->
+<cfcomponent extends="Controller">
+	<cffunction name="init">
+		<!-- This controller relies on the default behavior. -->
+		<cfset super.init()>
 	</cffunction>
 </cfcomponent>
 ```
