@@ -100,7 +100,7 @@ drawRoutes()
 mutate data.
 
 Here is an example where the `create`, `update`, and `delete` methods are changing data in the database, and
-thus need to be protected. However, the `index`, `new`, and `update` methods don't need any sort of protection.
+thus need to be protected. However, the `index`, `new`, and `edit` methods don't need any sort of protection.
 
 ```coldfusion
 <cfcomponent extends="Controller">
