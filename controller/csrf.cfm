@@ -41,6 +41,7 @@
 	<cfreturn
 		isGet()
 		or isHead()
+		or isOptions()
 		or $isAnyAuthenticityTokenValid()
 	>
 </cffunction>
