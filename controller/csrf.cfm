@@ -9,7 +9,7 @@
 		// Initialize filters.
 		filters(
 			argumentCollection=arguments,
-			through="$flagRequestAsProtected,$setAuthenticityToken,$verifyAuthenticityToken,$regenerateAuthenticityToken",
+			through="$storeAuthenticityToken,$flagRequestAsProtected,$setAuthenticityToken,$verifyAuthenticityToken",
 			type="before"
 		);
 	</cfscript>
@@ -46,46 +46,12 @@
 	>
 </cffunction>
 
-<cffunction name="$isAnyAuthenticityTokenValid" returntype="boolean" hint="Returns whether or not `params.authenticityToken` is valid and stored based on user's session." output="false">
-	<cfscript>
-		var loc = {};
-
-		if ($isRequestProtectedFromForgery() && StructKeyExists(params, "authenticityToken")) {
-			if (!StructKeyExists(session, "$wheels")) {
-				session.$wheels = {};
-			}
-
-			loc.isValid = StructKeyExists(session.$wheels, "authenticityToken")
-				&& session.$wheels.authenticityToken == params.authenticityToken;
-		}
-		else {
-			loc.isValid = false;
-		}
-	</cfscript>
-	<cfreturn loc.isValid>
-</cffunction>
-
 <cffunction name="$isRequestProtectedFromForgery" returntype="boolean" hint="Returns whether or not the request has been protected from forgery." output="false">
 	<cfreturn
 		StructKeyExists(request.$wheels, "protectedFromForgery")
 		and IsBoolean(request.$wheels.protectedFromForgery)
 		and request.$wheels.protectedFromForgery
 	>
-</cffunction>
-
-<cffunction name="$generateAuthenticityToken" returntype="string" hint="Generates new authenticity token based on capabilities of CFML engine." output="false">
-	<!--- Cache token for entire session. --->
-	<cfparam name="session.$wheels.authenticityToken" type="string" default="#GenerateSecretKey("AES")#">
-	<cfreturn session.$wheels.authenticityToken>
-</cffunction>
-
-<cffunction name="$regenerateAuthenticityToken" hint="Regenerates authenticity token if request is not AJAX-based and the request is protected from forgery." output="false">
-	<cfscript>
-		// If valid and not AJAX-based, reset for next full-page request.
-		if (!isAjax() && $isRequestProtectedFromForgery()) {
-			session.$wheels.authenticityToken = GenerateSecretKey("AES");
-		}
-	</cfscript>
 </cffunction>
 
 <cffunction name="$setAuthenticityToken" hint="Ensures authenticity token is set at `params.authenticityToken` if it's `POST`ed or included in the `X-CSRF-Token` header." output="false">
@@ -100,4 +66,18 @@
 			}
 		}
 	</cfscript>
+</cffunction>
+
+<cffunction name="$storeAuthenticityToken" hint="Generates and stores an authenticity token in the session." output="false">
+	<cfset $generateAuthenticityToken()>
+</cffunction>
+
+<cffunction name="$hasBuiltInCsrfFunctions" returntype="boolean" hint="Returns whether or not this ColdFusion install has the built-in `CsrfGenerateToken` and `CsrfVerifyToken` functions." output="false">
+	<cfreturn
+		application.$wheels.serverName eq "Railo"
+		or (
+			application.$wheels.serverName eq "Adobe ColdFusion"
+			and Int(ListFirst(application.$wheels.serverVersion, ".,")) gte 10
+		)
+	>
 </cffunction>
