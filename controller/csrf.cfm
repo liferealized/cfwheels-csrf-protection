@@ -74,7 +74,7 @@
 
 <cffunction name="$hasBuiltInCsrfFunctions" returntype="boolean" hint="Returns whether or not this ColdFusion install has the built-in `CsrfGenerateToken` and `CsrfVerifyToken` functions." output="false">
 	<cfreturn
-		application.$wheels.serverName eq "Railo"
+		application.$wheels.serverName eq "Lucee"
 		or (
 			application.$wheels.serverName eq "Adobe ColdFusion"
 			and Int(ListFirst(application.$wheels.serverVersion, ".,")) gte 10
