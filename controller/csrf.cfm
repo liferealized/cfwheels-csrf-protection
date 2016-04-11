@@ -73,11 +73,29 @@
 </cffunction>
 
 <cffunction name="$hasBuiltInCsrfFunctions" returntype="boolean" hint="Returns whether or not this ColdFusion install has the built-in `CsrfGenerateToken` and `CsrfVerifyToken` functions." output="false">
+	<cfscript>
+		var loc = {};
+
+		// Inspect CFML engine and version.
+		if (StructKeyExists(server, "lucee")) {
+			loc.serverName = "Lucee";
+			loc.serverVersion = server.lucee.version;
+		}
+		else if (StructKeyExists(server, "railo")) {
+			loc.serverName = "Railo";
+			loc.serverVersion = server.railo.version;
+		}
+		else {
+			loc.serverName = "Adobe ColdFusion";
+			loc.serverVersion = server.coldfusion.productVersion;
+		}
+	</cfscript>
+
 	<cfreturn
-		application.$wheels.serverName eq "Lucee"
+		loc.serverName is "Lucee"
 		or (
-			application.$wheels.serverName eq "Adobe ColdFusion"
-			and Int(ListFirst(application.$wheels.serverVersion, ".,")) gte 10
+			loc.serverName is "Adobe ColdFusion"
+			and Int(ListFirst(loc.serverVersion, ".,")) gte 10
 		)
 	>
 </cffunction>
