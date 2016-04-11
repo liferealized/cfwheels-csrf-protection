@@ -272,6 +272,15 @@ define(['jquery'], function ($) {
 });
 ```
 
+## Building the plugin release
+
+Follow these steps:
+
+1.  Update `build.sh` to have the correct version number for the release.
+2.  Run `sh build.sh`
+
+The zip file should appear containing a releaseable CFWheels plugin named `CsrfProtection-[VERSION].zip`.
+
 ## License
 
 The MIT License (MIT)
