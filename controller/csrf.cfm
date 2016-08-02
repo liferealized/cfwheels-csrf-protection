@@ -58,7 +58,7 @@
 	<cfscript>
 		var loc = {};
 
-		if ($isVerifiedRequest() && isAjax()) {
+		if (!$isVerifiedRequest() && isAjax()) {
 			loc.headers = GetHttpRequestData().headers;
 
 			if (StructKeyExists(loc.headers, "X-CSRF-Token")) {
