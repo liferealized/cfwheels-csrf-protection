@@ -42,18 +42,21 @@ this README.
 
 ## Public Methods
 
-`protectFromForgery([string with, string only, string except])`<br />
+**`protectFromForgery([string with, string only, string except])`**
+
 Call this in a controller's `init` method (usually in the base `controllers/Controller.cfc`) to setup CSRF
 protection. The optional `with` argument accepts values of `error` (default), which raises a
 `Wheels.InvalidAuthenticityToken` error on failed authenticity token verification, and `abort`, which aborts
 requests with a failed authenticity token silently. The `only` and `except` arguments work similarly to the
 corresponding ones for the CFWheels `filters` method.
 
-`csrfMetaTags()`<br />
+**`csrfMetaTags()`**
+
 Include this in your layouts' `<head>` sections to include `meta` tags containing the authenticity token for
 use by JavaScript AJAX requests. (See the _Open Issue: AJAX Calls_ section below for more information.)
 
-`authenticityTokenField()`<br />
+**`authenticityTokenField()`**
+
 If you need to manually place the `authenticityToken` hidden field in your own form, use this form helper to
 do so. (See the _Prerequisites_ section below for more information about this.)
 
@@ -249,7 +252,7 @@ APIs_ section above (or even used in combination with that strategy):
 </cfcomponent>
 ```
 
-## Open Issue: AJAX Calls
+## Configuring AJAX Calls
 
 JavaScript calls that use AJAX to `POST` to your CFWheels app may get tripped up by CSRF Protection.
 
@@ -272,6 +275,96 @@ define(['jquery'], function ($) {
 });
 ```
 
+If you're using jQuery and are already using the [ColdRoute plugin][3], you may have already installed the
+[jQuery UJS script][4], which takes care of this AJAX configuration for you. If not, feel free to install that.
+
+## Authenticity Token Storage
+
+This plugin contains 2 storage methods: `session` (default) and `cookie`.
+
+Each method has its own tradeoffs. Here is a quick outline:
+
+-  **Session** storage (the default) requires zero configuration and will use your CF's built-in CSRF token
+   generation if you're using Adobe CF10+ or Lucee.
+
+   If you're using Adobe ColdFusion, session storage can have its limitations. For example, if the server must be
+   restarted in the middle of a user's session, their authenticity token could end up being lost on the server
+   before the user submits a form or AJAX request.
+
+   If you're using Lucee, there is the option of storing session data in a database instead of memory, so you'll
+   likely not experience this issue if you go that route.
+-  **Cookie** storage requires extra configuration but does not have the caveat involved with storing authenticity
+   tokens in server memory. With this strategy, the authenticity token is stored in an encrypted cookie on the
+   client. If the server must be restarted before the user submits a form with authenticity token, the
+   authenticity token is not lost.
+
+### Configuring Storage
+
+The key setting for telling this plugin which storage strategy to use is `application.csrf.store`. It will accept
+the values `session` or `cookie`.
+
+If you set this value to `cookie`, you must also set a value for `application.csrf.encryptionSecretKey`. The
+default algorithm for the encryption is `AES`, so you can generate a key using this line of code on your own
+server or [CF Live][5] (recommended) and then paste the value returned into the setting at `config/settings.cfm`:
+
+```coldfusion
+<cfoutput>#GenerateSecretKey("AES")#</cfoutput>
+```
+
+Note that you should generate this key once and paste the value into your settings file. Do not generate this
+token on the fly unless you want for tokens to be invalidated on each application restart (in which case you may
+as well then be using the `session` storage strategy).
+
+You then also have the following configurations available as you desire:
+
+**`application.csrf.cookieName`** (optional, default `_wheels_authenticity`)
+
+The name of the cookie to be set to store CSRF token data.
+
+**`application.csrf.cookieDomain`** (optional, default `[empty string]`)
+
+Domain to set the cookie on. See your CF engine's documentation of `cfcookie` for more information.
+
+**`application.csrf.cookieEncodeValue`** (optional, default `false`)
+
+Whether or not to have CF encode the cookie. See your CF engine's documentation of `cfcookie` for more
+information.
+
+**`application.csrf.cookieHttpOnly`** (optional, default `true`)
+
+Whether or not the have CF set the cookie as `HTTPOnly`. See your CF engine's documentation of `cfcookie` for
+more information.
+
+**`application.csrf.cookiePath`** (optional, default `[empty string]`)
+
+Path to set the cookie on. See your CF engine's documentation of `cfcookie` for more information.
+
+**`application.csrf.cookiePreserveCase`** (optional, default `false`)
+
+Whether or not to preserve the case of the cookie's name. See your CF engine's documentation of `cfcookie` for
+more information.
+
+**`application.csrf.cookieSecure`** (optional, default `false`)
+
+Whether or not to only allow the cookie to be delivered over the HTTPS protocol. See your CF engine's
+documentation for more information.
+
+**`application.csrf.encryptionAlgorithm`** (optional, default `AES`)
+
+Encryption algorithm to use for encrypting the cookie's value. See your CF engine's documentation of the `Encrypt`
+function for more information.
+
+**`application.csrf.encryptionSecretKey`** (required)
+
+Key to use as salt for encrypting the cookie's value. Note that this must be compatible with the value chosen
+for `application.csrf.encryptionAlgorithm`. See your CF engine's documentation of the `Encrypt` function for more
+information.
+
+**`application.csrf.encryptionEncoding`** (optional, default `Base64`)
+
+Encoding to use to write the encrypted value to the cookie. See your CF engine's documentation of the `Encrypt`
+function for more information.
+
 ## Building the plugin release
 
 Follow these steps:
@@ -291,3 +384,5 @@ Copyright (c) 2016 Liquifusion Studios
 [1]: https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29
 [2]: https://github.com/liquifusion/cfwheels-csrf-protection/releases
 [3]: https://github.com/dhumphreys/cfwheels-coldroute
+[4]: https://github.com/rails/jquery-ujs
+[5]: http://cflive.net/
